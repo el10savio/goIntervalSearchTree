@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	errEmptyStack = errors.New("stack is empty")
+	errIsEmptyStack = errors.New("stack is empty")
 )
 
 // Stack ...
@@ -20,6 +20,13 @@ func New() *Stack {
 	return &Stack{}
 }
 
+// Clear ...
+func (s *Stack) Clear() {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.stack = nil
+}
+
 // Push ...
 func (s *Stack) Push(value int) {
 	s.lock.Lock()
@@ -29,8 +36,8 @@ func (s *Stack) Push(value int) {
 
 // Pop ...
 func (s *Stack) Pop() (int, error) {
-	if s.Empty() {
-		return 0, errEmptyStack
+	if s.IsEmpty() {
+		return 0, errIsEmptyStack
 	}
 
 	s.lock.Lock()
@@ -43,12 +50,34 @@ func (s *Stack) Pop() (int, error) {
 	return elem, nil
 }
 
+// Front ...
+func (s *Stack) Front() (int, error) {
+	if s.IsEmpty() {
+		return 0, errIsEmptyStack
+	}
+
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	len := len(s.stack)
+	elem := s.stack[len-1]
+
+	return elem, nil
+}
+
 // Size ...
 func (s *Stack) Size() int {
 	return len(s.stack)
 }
 
-// Empty ...
-func (s *Stack) Empty() bool {
+// List ...
+func (s *Stack) List() []int {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	return s.stack
+}
+
+// IsEmpty ...
+func (s *Stack) IsEmpty() bool {
 	return len(s.stack) == 0
 }
