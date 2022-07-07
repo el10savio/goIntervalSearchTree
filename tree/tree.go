@@ -2,6 +2,11 @@ package tree
 
 import "errors"
 
+var (
+	// TODO: Pass lo to err
+	ErrDuplicateLeftKey = errors.New("duplicate lo provided")
+)
+
 // IntervalTree ...
 type IntervalTree struct {
 	root Node
@@ -23,16 +28,30 @@ func New() *IntervalTree {
 
 // Put ...
 func (it *IntervalTree) Put(lo, hi int) error {
-	if it.root == nil {
-		it.root = addNode(lo, hi, hi, nil, nil)
+	// TODO: Maintain stack for maxEnd update
+	return put(it.root, lo, hi)
+}
+
+// put ...
+func put(root *Node, lo, hi int) error {
+	if root == nil {
+		root = addNode(lo, hi, hi, nil, nil)
 		return nil
 	}
 
-	if it.root.left == lo {
-		// TODO: Move err to var
-		// TODO: Pass lo to err
-		return errors.New("duplicate lo provided")
+	if root.left == lo {
+		return ErrDuplicateLeftKey
 	}
+
+	if root.left < lo {
+		return put(root.right, lo, hi)
+	}
+
+	if root.left > lo {
+		return put(root.left, lo, hi)
+	}
+
+	return nil
 }
 
 // addNode ...
