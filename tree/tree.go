@@ -3,8 +3,8 @@ package tree
 import "errors"
 
 var (
-	// TODO: Pass lo to err
-	ErrDuplicateLeftKey = errors.New("duplicate lo provided")
+	ErrDuplicateLeftKey = errors.New("duplicate lo provided") // TODO: Pass lo to err
+	ErrNodeDoesNotExist = errors.New("node does not exist")   // TODO: Pass in lo & hi
 )
 
 // IntervalTree ...
@@ -32,6 +32,31 @@ func (it *IntervalTree) Put(lo, hi int) error {
 	return put(it.root, lo, hi)
 }
 
+// Search ...
+func (it *IntervalTree) Search(lo, hi int) *Node {
+	return search(it.root, lo, hi)
+}
+
+// Delete ...
+func (it *IntervalTree) Delete(lo, hi int) error {
+	// Search if node exists
+	node := search(it.root, lo, hi)
+
+	// Error out if it does not
+	if node == nil {
+		return ErrNodeDoesNotExist
+	}
+
+	return nil
+}
+
+// Delete node at point
+func delete(root *Node, value int) error {
+	// Replace with left node
+	// If left node does not exist
+	// replace with right
+}
+
 // put ...
 func put(root *Node, lo, hi int) error {
 	if root == nil {
@@ -52,6 +77,23 @@ func put(root *Node, lo, hi int) error {
 	}
 
 	return nil
+}
+
+// search ...
+func search(root *Node, lo, hi int) *Node {
+	if root == nil {
+		return nil
+	}
+
+	if root.left == lo && root.right == hi {
+		return root
+	}
+
+	if root.left < lo {
+		return search(root.right, lo, hi)
+	}
+
+	return search(root.left, lo, hi)
 }
 
 // addNode ...
