@@ -1,6 +1,9 @@
 package tree
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var (
 	ErrDuplicateLeftKey = errors.New("duplicate lo provided") // TODO: Pass lo to err
@@ -9,54 +12,61 @@ var (
 
 // IntervalTree ...
 type IntervalTree struct {
-	root Node
+	root *Node
 }
 
 // Node ...
 type Node struct {
+	interval Interval
+	max      int
+	left     *Node
+	right    *Node
+}
+
+// Interval
+type Interval struct {
 	left  int
 	right int
-	max   int
-	left  *Node
-	right *Node
 }
 
 // New ...
 func New() *IntervalTree {
-	return &IntervalTree{root: nil}
+	return &IntervalTree{}
+}
+
+// Clear ...
+func (it *IntervalTree) Clear() {
+	it.root = nil
 }
 
 // Put ...
 func (it *IntervalTree) Put(lo, hi int) error {
 	// TODO: Maintain stack for maxEnd update
-	return put(it.root, lo, hi)
+	it.root, _ = put(it.root, it.root, lo, hi)
+	return nil
 }
 
 // Search ...
 func (it *IntervalTree) Search(lo, hi int) *Node {
-	node, _ := search(it.root, nil, lo, hi)
-	return node
+	return search(it.root, lo, hi)
 }
 
 // Delete ...
 func (it *IntervalTree) Delete(lo, hi int) error {
 	// Search if node exists
-	//
-	// TODO: Remove parent from signature
-	// if not required
-	node, _ := search(it.root, nil, lo, hi)
-
-	// Error out if it does not
+	node := search(it.root, lo, hi)
 	if node == nil {
 		return ErrNodeDoesNotExist
 	}
+
+	deleteNode(node, lo, hi)
 
 	return nil
 }
 
 // Delete node at point
-func delete(lo, hi int) {
-	node, parent := search(root, nil, lo, hi)
+func deleteNode(root *Node, lo, hi int) {
+	node := search(root, lo, hi)
 	if node == nil {
 		return
 	}
@@ -77,9 +87,30 @@ func delete(lo, hi int) {
 	}
 
 	replacement := maxNodeInLeftSubtree(node)
-	delete(replacement.Left, replacement.Right)
+	deleteNode(node, replacement.interval.left, replacement.interval.right)
 
-	node.Left, node.Right = replacement.Left, replacement.Right
+	node = &Node{
+		interval: Interval{replacement.interval.left, replacement.interval.right},
+		max:      replacement.max,
+		left:     replacement.left,
+		right:    replacement.right,
+	}
+}
+
+// toList ...
+func (it *IntervalTree) toList() []int {
+	return toListHandler(it.root)
+}
+
+// toListHandler ...
+func toListHandler(node *Node) []int {
+	if node == nil {
+		return []int{}
+	}
+	return append(
+		[]int{node.interval.left, node.interval.right},
+		append(toListHandler(node.left), toListHandler(node.right)...)...,
+	)
 }
 
 func maxNodeInLeftSubtree(root *Node) *Node {
@@ -87,58 +118,55 @@ func maxNodeInLeftSubtree(root *Node) *Node {
 		return nil
 	}
 
-	if root.Left == nil {
+	if root.left == nil {
 		return nil
 	}
 
-	root = root.Left
-	for root.Right != nil {
-		root = root.Right
+	root = root.left
+	for root.right != nil {
+		root = root.right
 	}
 
 	return root
 }
 
 // put ...
-func put(root *Node, lo, hi int) error {
-	if root == nil {
-		root = addNode(lo, hi, hi, nil, nil)
-		return nil
+func put(root, node *Node, lo, hi int) (*Node, error) {
+	if node == nil {
+		return addNode(lo, hi, hi, nil, nil), nil
 	}
 
-	if root.left == lo {
-		return ErrDuplicateLeftKey
+	if node.interval.left < lo {
+		fmt.Println("right")
+		return put(root, node.right, lo, hi)
 	}
 
-	if root.left < lo {
-		return put(root.right, lo, hi)
+	if node.interval.left > lo {
+		fmt.Println("left")
+		return put(root, node.left, lo, hi)
 	}
 
-	if root.left > lo {
-		return put(root.left, lo, hi)
-	}
-
-	return nil
+	return root, ErrDuplicateLeftKey
 }
 
 // search ...
-func search(root, parent *Node, lo, hi int) (*Node, *Node) {
+func search(root *Node, lo, hi int) *Node {
 	if root == nil {
-		return nil, nil
+		return nil
 	}
 
-	if root.left == lo && root.right == hi {
-		return root, parent
+	if root.interval.left == lo && root.interval.right == hi {
+		return root
 	}
 
-	if root.left < lo {
-		return search(root.right, root, lo, hi)
+	if root.interval.left < lo {
+		return search(root.right, lo, hi)
 	}
 
-	return search(root.left, root, lo, hi)
+	return search(root.left, lo, hi)
 }
 
 // addNode ...
 func addNode(lo, hi, max int, left, right *Node) *Node {
-	return &Node{lo, hi, max, left, right}
+	return &Node{Interval{lo, hi}, max, left, right}
 }
